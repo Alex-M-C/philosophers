@@ -17,7 +17,7 @@ static pthread_mutex_t	*create_forks(int n_forks)
 	return (forks);
 }
 
-static t_philosopher	*create_philos(int argc, int *argi)
+static t_philosopher	*create_philos(int *argi, t_data *data)
 {
 	t_philosopher	*philos;
 	int				i;
@@ -29,26 +29,41 @@ static t_philosopher	*create_philos(int argc, int *argi)
 	while (i < argi[0])
 	{
 		philos[i].id = i + 1;
-		philos[i].ttd = argi[1];
-		philos[i].tte = argi[2];
-		philos[i].tts = argi[3];
-		if (argc > 4)
-			philos[i].limit_meals = argi[4];
-		else
-			philos[i].limit_meals = -1;
+		philos[i].n_meals = 0;
+		philos[i].data = data;
+		philos[i].last_meal = data->start_time;
 		i++;
 	}
 	return (philos);
 }
 
-static int	*parse_args(int argc, char **argv)
+static int	create_data(t_data *data, int *argi, int argc)
+{
+	data->forks = create_forks(argi[0]);
+	pthread_mutex_init(&data->stop_mutex, NULL);
+	pthread_mutex_init(&data->print_mutex, NULL);
+	if (!data->forks)
+		return (1);
+	data->stop = 0;
+	data->n_philos = argi[0];
+	data->ttd = argi[1];
+	data->tte = argi[2];
+	data->tts = argi[3];
+	if (argc == 6)
+		data->limit_meals = argi[4];
+	else
+		data->limit_meals = -1;
+	return (0);
+}
+
+static int	*parse_args(int argc, char **argv, t_data *data)
 {
 	int	*argi;
     int	i;
 	int	j;
 
     i = 1;
-	argi = malloc(argc * sizeof(int));
+	argi = malloc((argc - 1) * sizeof(int));
 	if (!argi)
 		return (NULL);
     while (i < argc)
@@ -57,8 +72,8 @@ static int	*parse_args(int argc, char **argv)
 		while (argv[i][j])
 			if (ft_isdigit(argv[i][j++]) == 0)
 				return (free(argi), NULL);
-		argi[i] = ft_atoi(argv[i]);
-		if (argi[i] < 0)
+		argi[i - 1] = ft_atoi(argv[i]);
+		if (argi[i - 1] < 0)
 			return (free(argi), NULL);
 		i++;
     }
@@ -75,23 +90,28 @@ time_to_sleep
 int	main(int argc, char **argv)
 {
 	t_philosopher 	*philos;
-	pthread_mutex_t	*forks;
-	struct timeval	tv;
+	pthread_t		d_thread;
+	t_data			data;
 	int				*argi;
+	int				i;
 
     if (argc < 5 || argc > 6)
-        err_manager("There must be 4-5 arguments", 1);
-	argi = parse_args(argc, argv);
+		return (printf("There must be 4-5 arguments"), 1);
+	argi = parse_args(argc, argv, &data);
 	if (!argi)
-		err_manager("Malloc error 1", 1);
-	philos = create_philos(argc, argi);
+		return (printf("Malloc error 1"), 1);
+	if (create_data(&data, argi, argc) == 1)
+		return (free(argi), printf("Malloc error 2"), 1);
+	data.start_time = current_time_ms();
+	philos = create_philos(argi, &data);
 	if (!philos)
-		return (free(argi), err_manager("Malloc error 2", 1), 1);
-	forks = create_forks(argi[0]);
-	if (!forks)
-		return (1);
-	//start_cycle(philos, forks, tv);
-	// gettimeofday(&tv, NULL);
-	// printf("Time: %lld", (long long)((tv.tv_sec * 1000) + (tv.tv_usec / 1000)));
-    return (0); //close all
+		return (free_data(&data), free(argi), printf("Malloc error 3"), 1);
+	i = -1;
+	while (++i < argi[0])
+		pthread_create(&philos[i].thread, NULL, start_cycle, &philos[i]);
+	d_thread = create_death_thread(philos);
+	i = -1;
+	while (++i < argi[0])
+		pthread_join(philos[i].thread, NULL);
+	return (pthread_join(d_thread, NULL), free(philos), free_data(&data), free(argi), 0);
 }

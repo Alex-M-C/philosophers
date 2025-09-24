@@ -1,3 +1,38 @@
+#include "philosophers.h"
+
+void	print_action(t_philosopher *philo, char *msg)
+{
+	pthread_mutex_lock(&philo->data->print_mutex);
+    if (!is_stopped(philo->data))
+    {
+        printf("%lld %d %s\n",
+               current_time_ms() - philo->data->start_time,
+               philo->id, msg);
+    }
+	pthread_mutex_unlock(&philo->data->print_mutex);
+}
+
+pthread_t	create_death_thread(t_philosopher *philos)
+{
+	pthread_t	d_thread;
+
+	pthread_create(&d_thread, NULL, death_check, philos);
+	return (d_thread);
+}
+
+void	free_data(t_data *data)
+{
+	int	i;
+
+	i = 0;
+	while (i < data->n_philos)
+	{
+		pthread_mutex_destroy(&data->forks[i]);
+		i++;
+	}
+	free(data->forks);
+	pthread_mutex_destroy(&data->stop_mutex);
+}
 
 //Converts the initial portion of the string pointed to by NPTR to int.
 int	ft_atoi(const char *nptr)
