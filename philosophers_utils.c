@@ -1,14 +1,26 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   philosophers_utils.c                               :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: aleconst <marvin@42.fr>                    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/09/25 12:55:04 by aleconst          #+#    #+#             */
+/*   Updated: 2025/09/25 12:55:06 by aleconst         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "philosophers.h"
 
 void	print_action(t_philosopher *philo, char *msg)
 {
 	pthread_mutex_lock(&philo->data->print_mutex);
-    if (!is_stopped(philo->data))
-    {
-        printf("%lld %d %s\n",
-               current_time_ms() - philo->data->start_time,
-               philo->id, msg);
-    }
+	if (!is_stopped(philo->data))
+	{
+		printf("%lld %d %s\n",
+			current_time_ms() - philo->data->start_time,
+			philo->id, msg);
+	}
 	pthread_mutex_unlock(&philo->data->print_mutex);
 }
 
@@ -32,6 +44,7 @@ void	free_data(t_data *data)
 	}
 	free(data->forks);
 	pthread_mutex_destroy(&data->stop_mutex);
+	pthread_mutex_destroy(&data->print_mutex);
 }
 
 //Converts the initial portion of the string pointed to by NPTR to int.

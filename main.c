@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   main.c                                             :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: aleconst <marvin@42.fr>                    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/09/25 12:54:49 by aleconst          #+#    #+#             */
+/*   Updated: 2025/09/25 12:54:52 by aleconst         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "philosophers.h"
 
 static pthread_mutex_t	*create_forks(int n_forks)
@@ -56,18 +68,18 @@ static int	create_data(t_data *data, int *argi, int argc)
 	return (0);
 }
 
-static int	*parse_args(int argc, char **argv, t_data *data)
+static int	*parse_args(int argc, char **argv)
 {
 	int	*argi;
-    int	i;
+	int	i;
 	int	j;
 
-    i = 1;
+	i = 1;
 	argi = malloc((argc - 1) * sizeof(int));
 	if (!argi)
 		return (NULL);
-    while (i < argc)
-    {
+	while (i < argc)
+	{
 		j = 0;
 		while (argv[i][j])
 			if (ft_isdigit(argv[i][j++]) == 0)
@@ -76,7 +88,7 @@ static int	*parse_args(int argc, char **argv, t_data *data)
 		if (argi[i - 1] < 0)
 			return (free(argi), NULL);
 		i++;
-    }
+	}
 	return (argi);
 }
 
@@ -89,29 +101,24 @@ time_to_sleep
 */
 int	main(int argc, char **argv)
 {
-	t_philosopher 	*philos;
+	t_philosopher	*philos;
 	pthread_t		d_thread;
 	t_data			data;
 	int				*argi;
-	int				i;
 
-    if (argc < 5 || argc > 6)
-		return (printf("There must be 4-5 arguments"), 1);
-	argi = parse_args(argc, argv, &data);
+	if (argc < 5 || argc > 6)
+		return (printf("There must be 4-5 arguments\n"), 1);
+	argi = parse_args(argc, argv);
 	if (!argi)
-		return (printf("Malloc error 1"), 1);
+		return (printf("Format error\n"), 1);
+	if (argi[0] < 1)
+		return (free(argi), printf("Not enough philosophers provided\n"), 1);
 	if (create_data(&data, argi, argc) == 1)
-		return (free(argi), printf("Malloc error 2"), 1);
+		return (free(argi), printf("Malloc error 2\n"), 1);
 	data.start_time = current_time_ms();
 	philos = create_philos(argi, &data);
 	if (!philos)
-		return (free_data(&data), free(argi), printf("Malloc error 3"), 1);
-	i = -1;
-	while (++i < argi[0])
-		pthread_create(&philos[i].thread, NULL, start_cycle, &philos[i]);
-	d_thread = create_death_thread(philos);
-	i = -1;
-	while (++i < argi[0])
-		pthread_join(philos[i].thread, NULL);
-	return (pthread_join(d_thread, NULL), free(philos), free_data(&data), free(argi), 0);
+		return (free_data(&data), free(argi), printf("Malloc error 3\n"), 1);
+	create_and_end_threads(philos, &d_thread);
+	return (free(philos), free_data(&data), free(argi), 0);
 }
